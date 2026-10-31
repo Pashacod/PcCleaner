@@ -14,4 +14,13 @@ public static class Format
         >= 1L << 10 => (n / (double)(1L << 10)).ToString("0", Ru) + " КБ",
         _ => $"{n} Б",
     };
+
+    /// <summary>«1 копия», «2 копии», «5 копий».</summary>
+    public static string Count(int n, string one, string few, string many) =>
+        $"{n} " + ((n % 10, n % 100) switch
+        {
+            (1, not 11) => one,
+            (>= 2 and <= 4, < 12 or > 14) => few,
+            _ => many,
+        });
 }

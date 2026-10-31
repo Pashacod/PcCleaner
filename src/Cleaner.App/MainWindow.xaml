@@ -26,6 +26,9 @@
             <TabItem Header="Большие файлы">
                 <views:BigFilesView x:Name="BigFiles" />
             </TabItem>
+            <TabItem Header="Копии">
+                <views:DuplicatesView x:Name="Duplicates" />
+            </TabItem>
         </TabControl>
         <!-- Обновление -->
         <Border x:Name="UpdateBar" Grid.Row="2" Margin="16,0,16,16" Padding="16,10" CornerRadius="8"

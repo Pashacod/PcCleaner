@@ -16,6 +16,7 @@ public partial class MainWindow : FluentWindow
         Cleanup.DataContext = new CleanupViewModel(
             SourceCatalog.CreateDefault(AppServices.Deleter, AppServices.Settings), Confirm);
         BigFiles.DataContext = new BigFilesViewModel(Confirm);
+        Duplicates.DataContext = new DuplicatesViewModel(Confirm);
 
         var updates = new UpdateViewModel();
         UpdateBar.DataContext = updates;

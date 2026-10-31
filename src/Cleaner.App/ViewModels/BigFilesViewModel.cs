@@ -39,7 +39,7 @@ public partial class BigFileGroupViewModel : ObservableObject
     public ObservableCollection<BigFileRow> Files { get; }
     public bool IsMulti => Files.Count > 1;
     public BigFileRow First => Files[0];
-    public string Header => $"{Folder} — {Files.Count} {Plural(Files.Count)}, {Format.Bytes(Files.Sum(f => f.SizeBytes))}";
+    public string Header => $"{Folder} — {Format.Count(Files.Count, "файл", "файла", "файлов")}, {Format.Bytes(Files.Sum(f => f.SizeBytes))}";
 
     public bool? IsChecked
     {
@@ -63,14 +63,6 @@ public partial class BigFileGroupViewModel : ObservableObject
         OnPropertyChanged(nameof(IsChecked));
         changed();
     }
-
-    private static string Plural(int n) =>
-        (n % 10, n % 100) switch
-        {
-            (1, not 11) => "файл",
-            (>= 2 and <= 4, < 12 or > 14) => "файла",
-            _ => "файлов",
-        };
 }
 
 /// <summary>Вкладка «Большие файлы»: поиск топа по диску, группировка по папкам, отправка в корзину.</summary>
