@@ -1,0 +1,158 @@
+<UserControl x:Class="Cleaner.App.Views.CleanupView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+    <Grid Margin="0,12,0,0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Диск -->
+        <ui:Card Grid.Row="0" Margin="0,0,0,12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:SymbolIcon Symbol="HardDrive20" FontSize="32" Margin="0,0,16,0" />
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Drive.Text}" FontSize="16" FontWeight="SemiBold" />
+                    <ProgressBar Value="{Binding Drive.UsedPercent, Mode=OneWay}" Maximum="100" Height="6" Margin="0,8,0,0" />
+                </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="16,0,0,0" VerticalAlignment="Center">
+                    <ui:Button Content="Сканировать" Appearance="Primary" Icon="{ui:SymbolIcon Search24}"
+                               Command="{Binding ScanCommand}" Padding="20,8" />
+                    <ui:Button Content="Отмена" Margin="8,0,0,0" Command="{Binding CancelCommand}"
+                               Visibility="{Binding IsBusy, Converter={StaticResource Vis}}" />
+                </StackPanel>
+            </Grid>
+        </ui:Card>
+
+        <!-- Категории -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <TextBlock Text="Нажмите «Сканировать», чтобы найти мусор." Opacity="0.7" Margin="4,8"
+                           Visibility="{Binding HasScanned, Converter={StaticResource Vis}, ConverterParameter=invert}" />
+                <ItemsControl ItemsSource="{Binding Categories}"
+                              Visibility="{Binding HasScanned, Converter={StaticResource Vis}}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <ui:CardExpander Margin="0,0,0,8" IsExpanded="False">
+                                <ui:CardExpander.Header>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <CheckBox IsChecked="{Binding IsChecked}" IsThreeState="False" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{Binding Title}" FontSize="15" FontWeight="SemiBold"
+                                                   VerticalAlignment="Center" Margin="4,0,0,0" />
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="0,0,12,0">
+                                            <ui:ProgressRing IsIndeterminate="True" Width="16" Height="16" Margin="0,0,8,0"
+                                                             Visibility="{Binding IsScanning, Converter={StaticResource Vis}}" />
+                                            <TextBlock Text="{Binding SizeText}" FontSize="15" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Grid>
+                                </ui:CardExpander.Header>
+                                <ItemsControl ItemsSource="{Binding Sources}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Margin="0,4">
+                                                <Expander>
+                                                    <Expander.Header>
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <CheckBox IsChecked="{Binding IsChecked}" IsThreeState="False" VerticalAlignment="Center" />
+                                                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="4,0,0,0">
+                                                                <TextBlock Text="{Binding Title}" />
+                                                                <TextBlock Text="{Binding Warning}" FontSize="12" Opacity="0.6" TextWrapping="Wrap"
+                                                                           Visibility="{Binding Warning, Converter={StaticResource NotNull}}" />
+                                                                <TextBlock Text="{Binding Error}" FontSize="12" Foreground="#E57373"
+                                                                           Visibility="{Binding Error, Converter={StaticResource NotNull}}" />
+                                                            </StackPanel>
+                                                            <TextBlock Grid.Column="2" Text="{Binding SizeText}" VerticalAlignment="Center" Margin="12,0" />
+                                                        </Grid>
+                                                    </Expander.Header>
+                                                    <ListBox ItemsSource="{Binding Items}" MaxHeight="280"
+                                                             VirtualizingPanel.IsVirtualizing="True"
+                                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                                        <ListBox.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <Grid>
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="Auto" />
+                                                                        <ColumnDefinition Width="*" />
+                                                                        <ColumnDefinition Width="Auto" />
+                                                                    </Grid.ColumnDefinitions>
+                                                                    <CheckBox IsChecked="{Binding IsChecked}" />
+                                                                    <TextBlock Grid.Column="1" Text="{Binding Path}" TextTrimming="CharacterEllipsis"
+                                                                               VerticalAlignment="Center" ToolTip="{Binding Path}" />
+                                                                    <TextBlock Grid.Column="2" Text="{Binding SizeText}" Margin="12,0,0,0"
+                                                                               VerticalAlignment="Center" />
+                                                                </Grid>
+                                                            </DataTemplate>
+                                                        </ListBox.ItemTemplate>
+                                                    </ListBox>
+                                                </Expander>
+                                                <!-- Браузер открыт -->
+                                                <Border Background="#33FFC107" CornerRadius="6" Padding="12,8" Margin="0,4,0,0"
+                                                        Visibility="{Binding Blocker, Converter={StaticResource NotNull}}">
+                                                    <DockPanel>
+                                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                                            <ui:Button Content="Повторить" Command="{Binding RetryCommand}" />
+                                                            <ui:Button Content="Пропустить" Margin="8,0,0,0" Command="{Binding SkipCommand}" />
+                                                        </StackPanel>
+                                                        <TextBlock Text="{Binding Blocker}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                                                    </DockPanel>
+                                                </Border>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ui:CardExpander>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Итог -->
+        <ui:Card Grid.Row="2" Margin="0,12,0,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="{Binding ResultText}" FontSize="16" FontWeight="SemiBold" Foreground="#66BB6A"
+                               Visibility="{Binding ResultText, Converter={StaticResource NotNull}}" />
+                    <Expander Header="{Binding SkippedText}" Margin="0,4,0,0"
+                              Visibility="{Binding Skipped.Count, Converter={StaticResource NotZero}}">
+                        <ListBox ItemsSource="{Binding Skipped}" MaxHeight="160">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock TextTrimming="CharacterEllipsis">
+                                        <Run Text="{Binding Reason, Mode=OneWay}" Foreground="#FFB74D" />
+                                        <Run Text=" — " />
+                                        <Run Text="{Binding Path, Mode=OneWay}" />
+                                    </TextBlock>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Expander>
+                    <TextBlock Text="{Binding SelectedText}" FontSize="14" Margin="0,4,0,0" />
+                </StackPanel>
+                <ui:Button Grid.Column="1" Content="Очистить" Appearance="Primary" Icon="{ui:SymbolIcon Delete24}"
+                           Command="{Binding CleanCommand}" Padding="24,10" VerticalAlignment="Center" />
+            </Grid>
+        </ui:Card>
+    </Grid>
+</UserControl>

@@ -1,0 +1,64 @@
+<UserControl x:Class="Cleaner.App.Views.BigFilesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             x:Name="Root">
+    <Grid Margin="0,12,0,0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ui:Card Grid.Row="0" Margin="0,0,0,12">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <ui:Button Content="Найти" Appearance="Primary" Icon="{ui:SymbolIcon Search24}"
+                               Command="{Binding FindCommand}" Padding="20,8" />
+                    <ui:Button Content="Отмена" Margin="8,0,0,0" Command="{Binding CancelCommand}"
+                               Visibility="{Binding IsBusy, Converter={StaticResource Vis}}" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Диск:" VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <ComboBox ItemsSource="{Binding Drives}" SelectedItem="{Binding SelectedDrive}" MinWidth="90"
+                              IsEnabled="{Binding IsIdle}" />
+                    <TextBlock Text="{Binding Status}" VerticalAlignment="Center" Margin="16,0,0,0" Opacity="0.8" />
+                </StackPanel>
+            </DockPanel>
+        </ui:Card>
+
+        <DataGrid Grid.Row="1" ItemsSource="{Binding Files}" AutoGenerateColumns="False" CanUserAddRows="False"
+                  HeadersVisibility="Column" SelectionMode="Single" GridLinesVisibility="None">
+            <DataGrid.Columns>
+                <DataGridTemplateColumn Width="Auto">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <CheckBox IsChecked="{Binding IsChecked, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Center" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="Имя" Binding="{Binding Name}" Width="2*" IsReadOnly="True" />
+                <DataGridTextColumn Header="Папка" Binding="{Binding Folder}" Width="2*" IsReadOnly="True" />
+                <DataGridTextColumn Header="Размер" Binding="{Binding SizeText}" SortMemberPath="SizeBytes" Width="80" IsReadOnly="True" />
+                <DataGridTextColumn Header="Изменён" Binding="{Binding LastWrite, StringFormat=dd.MM.yyyy}" Width="100" IsReadOnly="True" />
+                <DataGridTemplateColumn Width="Auto">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <ui:Button Icon="{ui:SymbolIcon FolderOpen24}" ToolTip="Открыть папку" Padding="6,2"
+                                       Command="{Binding DataContext.OpenFolderCommand, ElementName=Root}"
+                                       CommandParameter="{Binding}" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <ui:Card Grid.Row="2" Margin="0,12,0,0">
+            <DockPanel>
+                <ui:Button DockPanel.Dock="Right" Content="В корзину" Appearance="Primary" Icon="{ui:SymbolIcon Delete24}"
+                           Command="{Binding RecycleCommand}" Padding="24,10" />
+                <TextBlock Text="{Binding SelectedText}" FontSize="14" VerticalAlignment="Center" />
+            </DockPanel>
+        </ui:Card>
+    </Grid>
+</UserControl>

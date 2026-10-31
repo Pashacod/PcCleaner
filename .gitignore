@@ -484,3 +484,6 @@ $RECYCLE.BIN/
 *.swp
 .superpowers/
 dist/
+
+# Папка проекта Cleaner.App попадает под *.app выше (Windows не различает регистр)
+!src/Cleaner.App/
