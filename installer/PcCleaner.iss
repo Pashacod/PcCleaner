@@ -21,6 +21,7 @@ OutputBaseFilename=PcCleaner-Setup-{#AppVersion}
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
+SetupIconFile=..\src\Cleaner.App\Assets\app.ico
 UninstallDisplayIcon={app}\PcCleaner.exe
 CloseApplications=force
 
