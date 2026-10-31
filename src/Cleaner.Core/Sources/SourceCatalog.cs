@@ -1,3 +1,4 @@
+using Cleaner.Core.Drivers;
 using Cleaner.Core.IO;
 using Cleaner.Core.Settings;
 
@@ -18,6 +19,7 @@ public static class SourceCatalog
             new FolderContentsSource("windows-temp", "Временные файлы Windows", Categories.System,
                 Path.Combine(windows, "Temp"), deleter),
             new RecycleBinSource(),
+            new OldDriversSource(new SystemDriverStore()),
             new FolderContentsSource("npm-cache", "Кэш npm", Categories.Dev, Path.Combine(local, "npm-cache"), deleter),
             new FolderContentsSource("gradle-cache", "Кэш Gradle", Categories.Dev,
                 Path.Combine(GradleHome(profile), "caches"), deleter,
