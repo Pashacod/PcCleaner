@@ -25,6 +25,7 @@ public static class SourceCatalog
             new BrowserCacheSource("firefox-cache", "Кэш Firefox", "Firefox",
                 () => BrowserCacheSource.FirefoxCacheDirs(Path.Combine(local, @"Mozilla\Firefox\Profiles")),
                 BrowserCacheSource.ProcessRunning("firefox"), deleter),
+            new ProjectBuildsSource(projectRoots, deleter),
         ];
     }
 
