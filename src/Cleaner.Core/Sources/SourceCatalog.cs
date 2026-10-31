@@ -1,11 +1,12 @@
 using Cleaner.Core.IO;
+using Cleaner.Core.Settings;
 
 namespace Cleaner.Core.Sources;
 
 /// <summary>Все источники v1 с реальными путями этой системы.</summary>
 public static class SourceCatalog
 {
-    public static IReadOnlyList<IJunkSource> CreateDefault(FileDeleter deleter, IReadOnlyList<string> projectRoots)
+    public static IReadOnlyList<IJunkSource> CreateDefault(FileDeleter deleter, AppSettings settings)
     {
         var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         var profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
@@ -26,7 +27,7 @@ public static class SourceCatalog
             new BrowserCacheSource("firefox-cache", "Кэш Firefox", "Firefox",
                 () => BrowserCacheSource.FirefoxCacheDirs(Path.Combine(local, @"Mozilla\Firefox\Profiles")),
                 BrowserCacheSource.ProcessRunning("firefox"), deleter),
-            new ProjectBuildsSource(projectRoots, deleter),
+            new ProjectBuildsSource(settings.ProjectRoots, deleter),
         ];
     }
 
