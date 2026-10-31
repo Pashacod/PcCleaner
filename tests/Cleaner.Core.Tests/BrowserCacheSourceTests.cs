@@ -72,6 +72,7 @@ public class BrowserCacheSourceTests
 
         Assert.True(File.Exists(f));
         Assert.Equal(0, r.FreedBytes);
+        Assert.Equal("Закройте Chrome и нажмите «Повторить»", Assert.Single(r.Skipped).Reason);
     }
 
     [Fact]

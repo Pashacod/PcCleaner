@@ -160,4 +160,9 @@ public class FileDeleterTests
         Assert.False(System.IO.File.Exists(a));
         Assert.Equal(1, r.Deleted);
     }
+
+    [Fact]
+    public void RecycleAsksBeforePermanentDelete() =>
+        Assert.True((RecycleBin.Flags & RecycleBin.FOF_WANTNUKEWARNING) != 0,
+            "без FOF_WANTNUKEWARNING Windows молча удаляет насовсем файлы, не влезающие в корзину");
 }

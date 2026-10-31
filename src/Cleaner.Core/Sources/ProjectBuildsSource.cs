@@ -14,7 +14,9 @@ public class ProjectBuildsSource(IReadOnlyList<string> roots, FileDeleter delete
 
     private static readonly Rule[] Rules =
     [
-        new("build", [.. Gradle, "package.json"], true),
+        new("build", Gradle, true),
+        // В JS-проектах build/ бывает исходниками (ресурсы electron-builder, скрипты) — только по выбору человека.
+        new("build", ["package.json"], false),
         new(".gradle", Gradle, true),
         new("bin", ["*.csproj"], true),
         new("obj", ["*.csproj"], true),
@@ -24,7 +26,7 @@ public class ProjectBuildsSource(IReadOnlyList<string> roots, FileDeleter delete
     public string Id => "project-builds";
     public string Title => "Сборки проектов";
     public string Category => Categories.Dev;
-    public string? Warning => "node_modules по умолчанию не отмечены: после удаления нужен npm install";
+    public string? Warning => "node_modules и build в JS-проектах по умолчанию не отмечены: там бывают исходники, а после удаления node_modules нужен npm install";
     public bool CheckedByDefault => true;
 
     public Task<ScanResult> ScanAsync(IProgress<long> progress, CancellationToken ct) => Task.Run(() =>
@@ -49,8 +51,9 @@ public class ProjectBuildsSource(IReadOnlyList<string> roots, FileDeleter delete
         {
             if (sub.Attributes.HasFlag(FileAttributes.ReparsePoint) || sub.Name == ".git") continue;
 
-            var rule = Rules.FirstOrDefault(r => r.DirName.Equals(sub.Name, StringComparison.OrdinalIgnoreCase));
-            if (rule != null && HasMarker(dir, rule.Markers))
+            var rule = Rules.FirstOrDefault(r =>
+                r.DirName.Equals(sub.Name, StringComparison.OrdinalIgnoreCase) && HasMarker(dir, r.Markers));
+            if (rule != null)
             {
                 found.Add((sub.FullName, rule.Selected));
                 continue; // внутрь найденного мусора не заходим

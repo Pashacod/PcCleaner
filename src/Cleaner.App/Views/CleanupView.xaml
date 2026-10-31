@@ -36,7 +36,7 @@
             <StackPanel>
                 <TextBlock Text="Нажмите «Сканировать», чтобы найти мусор." Opacity="0.7" Margin="4,8"
                            Visibility="{Binding HasScanned, Converter={StaticResource Vis}, ConverterParameter=invert}" />
-                <ItemsControl ItemsSource="{Binding Categories}"
+                <ItemsControl ItemsSource="{Binding Categories}" IsEnabled="{Binding IsIdle}"
                               Visibility="{Binding HasScanned, Converter={StaticResource Vis}}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>

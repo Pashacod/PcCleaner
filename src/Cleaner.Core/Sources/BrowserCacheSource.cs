@@ -23,11 +23,15 @@ public class BrowserCacheSource(
     {
         var paths = findCacheDirs().SelectMany(ItemScanner.Children).Select(p => (p, true));
         var scan = ItemScanner.Scan(id, paths, progress, ct);
-        return isRunning() ? scan with { Blocker = $"Закройте {browserName} и нажмите «Повторить»" } : scan;
+        return isRunning() ? scan with { Blocker = BlockerText } : scan;
     }, ct);
 
     public Task<CleanResult> CleanAsync(ScanResult scan, CancellationToken ct) =>
-        isRunning() ? Task.FromResult(CleanResult.Empty) : Task.Run(() => deleter.DeletePermanently(scan.Items, ct));
+        isRunning()
+            ? Task.FromResult(new CleanResult(0, 0, [new SkippedItem(title, BlockerText)]))
+            : Task.Run(() => deleter.DeletePermanently(scan.Items, ct));
+
+    private string BlockerText => $"Закройте {browserName} и нажмите «Повторить»";
 
     /// <summary>Chrome/Edge: профили Default и "Profile N" внутри User Data.</summary>
     public static IEnumerable<string> ChromiumCacheDirs(string userDataDir) =>

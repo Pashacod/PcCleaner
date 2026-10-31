@@ -7,6 +7,10 @@ internal static class RecycleBin
 {
     private const uint FO_DELETE = 3;
     private const ushort FOF_SILENT = 0x4, FOF_NOCONFIRMATION = 0x10, FOF_ALLOWUNDO = 0x40, FOF_NOERRORUI = 0x400;
+    internal const ushort FOF_WANTNUKEWARNING = 0x4000;
+
+    // FOF_WANTNUKEWARNING: если файл не влезает в корзину, Windows спросит, а не удалит насовсем молча.
+    internal const ushort Flags = FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_SILENT | FOF_NOERRORUI | FOF_WANTNUKEWARNING;
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     private struct SHFILEOPSTRUCT
@@ -30,7 +34,7 @@ internal static class RecycleBin
         {
             wFunc = FO_DELETE,
             pFrom = path + "\0\0",
-            fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_SILENT | FOF_NOERRORUI,
+            fFlags = Flags,
         };
         return SHFileOperation(ref op) == 0 && !op.fAnyOperationsAborted;
     }

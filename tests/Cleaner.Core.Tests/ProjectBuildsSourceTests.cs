@@ -117,4 +117,28 @@ public class ProjectBuildsSourceTests
 
         Assert.Equal(t[@"App\build"], Assert.Single(await Scan(t.Path)).Path);
     }
+
+    [Fact]
+    public async Task NpmBuildFoundUnchecked()
+    {
+        using var t = new TempDir();
+        t.File(@"Web\package.json");
+        t.File(@"Web\build\icon.ico");
+
+        var build = Assert.Single(await Scan(t.Path));
+
+        Assert.Equal(t[@"Web\build"], build.Path);
+        Assert.False(build.Selected);
+    }
+
+    [Fact]
+    public async Task GradleBuildStaysChecked()
+    {
+        using var t = new TempDir();
+        t.File(@"App\build.gradle");
+        t.File(@"App\package.json");
+        t.File(@"App\build\out.bin");
+
+        Assert.True(Assert.Single(await Scan(t.Path)).Selected);
+    }
 }

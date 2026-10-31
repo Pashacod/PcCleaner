@@ -7,7 +7,9 @@ public static class SizeCalculator
     /// </summary>
     public static long GetSize(string path, CancellationToken ct)
     {
-        if (File.Exists(path)) return new FileInfo(path).Length;
+        // Один FileInfo: Exists и Length берутся из одного снимка, исчезнувший в Temp файл не бросает исключение.
+        var file = new FileInfo(path);
+        if (file.Exists) return file.Length;
         var dir = new DirectoryInfo(path);
         if (!dir.Exists || dir.Attributes.HasFlag(FileAttributes.ReparsePoint)) return 0;
         return DirSize(dir, ct);

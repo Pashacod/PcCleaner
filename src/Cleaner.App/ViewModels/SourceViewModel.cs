@@ -36,7 +36,8 @@ public partial class SourceViewModel(IJunkSource source, Action changed) : Obser
     public long TotalBytes => scan?.TotalBytes ?? LiveBytes;
     public string SizeText => Format.Bytes(TotalBytes);
     public bool HasScan => scan != null;
-    public long SelectedBytes => Items.Where(i => i.IsChecked).Sum(i => i.Item.SizeBytes);
+    /// <summary>Источник с плашкой (браузер открыт) очищен не будет — в сумму не входит.</summary>
+    public long SelectedBytes => Blocker != null ? 0 : Items.Where(i => i.IsChecked).Sum(i => i.Item.SizeBytes);
 
     /// <summary>true — всё отмечено, false — ничего, null — частично.</summary>
     public bool? IsChecked
@@ -60,8 +61,11 @@ public partial class SourceViewModel(IJunkSource source, Action changed) : Obser
 
     partial void OnLiveBytesChanged(long value) => OnPropertyChanged(nameof(SizeText));
 
+    partial void OnBlockerChanged(string? value) => ItemChanged();
+
     public async Task ScanAsync(CancellationToken ct)
     {
+        if (IsScanning) return; // «Повторить» во время общего сканирования не должен запускать второй проход
         scan = null;
         Items.Clear();
         Error = null;
