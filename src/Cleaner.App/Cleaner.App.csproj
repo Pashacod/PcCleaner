@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <Resource Include="Assets\app.png" />
+    <Resource Include="Assets\Sounds\*.wav" />
   </ItemGroup>
 
   <ItemGroup>

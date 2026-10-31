@@ -3,7 +3,7 @@ using System.Text.Json;
 namespace Cleaner.Core.Settings;
 
 /// <summary>settings.json рядом с программой. Битый или отсутствующий файл — значения по умолчанию.</summary>
-public record AppSettings(IReadOnlyList<string> ProjectRoots, long BigFileMinBytes, int BigFilesTop)
+public record AppSettings(IReadOnlyList<string> ProjectRoots, long BigFileMinBytes, int BigFilesTop, bool SoundsEnabled = true)
 {
     public static AppSettings Default { get; } = new([@"D:\Work"], 500L * 1024 * 1024, 50);
 

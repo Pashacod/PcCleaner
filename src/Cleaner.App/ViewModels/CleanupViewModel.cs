@@ -46,7 +46,10 @@ public partial class CleanupViewModel : ObservableObject
     public string SkippedText => $"Пропущено: {Skipped.Count}";
 
     [RelayCommand(CanExecute = nameof(IsIdle))]
-    private async Task ScanAsync()
+    private Task ScanAsync() => ScanAsync(quiet: false);
+
+    /// <param name="quiet">Повторное сканирование после очистки — без звука, звук очистки уже прозвучал.</param>
+    private async Task ScanAsync(bool quiet)
     {
         cts = new CancellationTokenSource();
         IsBusy = true;
@@ -64,6 +67,7 @@ public partial class CleanupViewModel : ObservableObject
             IsBusy = false;
             SelectionChanged();
             AppServices.Log.Write($"сканирование завершено, найдено {Format.Bytes(Categories.Sum(c => c.TotalBytes))}");
+            if (!quiet) Sounds.Found();
         }
     }
 
@@ -111,6 +115,7 @@ public partial class CleanupViewModel : ObservableObject
             AppServices.Log.Write($"очистка: {ResultText}, пропущено {total.Skipped.Count}");
             Drive.Refresh();
             IsBusy = false;
+            if (total.FreedBytes == 0 && total.Skipped.Count > 0) Sounds.Warn(); else Sounds.Done();
         }
         // После очистки показываем, что осталось.
         await ScanAfterCleanAsync();
@@ -120,7 +125,7 @@ public partial class CleanupViewModel : ObservableObject
     {
         var result = ResultText;
         var skipped = Skipped.ToList();
-        await ScanAsync();
+        await ScanAsync(quiet: true);
         ResultText = result;
         foreach (var s in skipped) Skipped.Add(s);
         OnPropertyChanged(nameof(SkippedText));

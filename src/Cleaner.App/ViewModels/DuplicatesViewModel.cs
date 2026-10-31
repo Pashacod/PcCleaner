@@ -117,6 +117,7 @@ public partial class DuplicatesViewModel(Func<string, Task<bool>> confirm) : Obs
             IsBusy = false;
             SelectionChanged();
         }
+        if (Status != "Поиск отменён") Sounds.Found();
     }
 
     private bool CanRecycle() => IsIdle && SelectedBytes > 0;
@@ -132,6 +133,7 @@ public partial class DuplicatesViewModel(Func<string, Task<bool>> confirm) : Obs
         {
             var items = rows.Select(r => new JunkItem(r.Path, r.File.SizeBytes, false, true)).ToList();
             var result = await Task.Run(() => AppServices.Deleter.SendToRecycleBin(items, manualSelection: true, default));
+            if (result.Deleted > 0) Sounds.Done(); else Sounds.Warn();
             AppServices.Log.Write($"копии: в корзину {result.Deleted}, {result.FreedBytes} байт, пропущено {result.Skipped.Count}");
             // Группы, где осталась одна копия, больше не копии.
             var left = Groups.Select(g => g.Group with { Files = g.Group.Files.Where(f => File.Exists(f.Path)).ToList() })

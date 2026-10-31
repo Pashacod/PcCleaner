@@ -179,6 +179,7 @@ public partial class ProgramsViewModel : ObservableObject
         foreach (var i in items) Leftovers.Add(new LeftoverRow(i, LeftoversChanged));
         LeftoversChanged();
         ShowLeftovers = items.Count > 0;
+        Sounds.Found(); // деинсталлятор закончил, остатки найдены (или их нет)
         RemoveText = items.Count > 0
             ? $"«{removing!.Name}» удалена. Найдены остатки — отметьте, что удалить:"
             : $"«{removing!.Name}» удалена, остатков не найдено.";
@@ -191,6 +192,7 @@ public partial class ProgramsViewModel : ObservableObject
         var items = Leftovers.Select(l => l.Item with { Selected = l.IsChecked }).ToList();
         var r = await Task.Run(() => AppServices.Deleter.SendToRecycleBin(items, manualSelection: true, default, programLeftover: true));
         AppServices.Log.Write($"остатки {removing?.Name}: в корзину {r.Deleted}, {r.FreedBytes} байт, пропущено {r.Skipped.Count}");
+        if (r.Deleted > 0) Sounds.Done(); else Sounds.Warn();
         await FinishAsync(r.Skipped.Count == 0
             ? $"«{removing?.Name}» удалена, остатки в корзине: {Format.Bytes(r.FreedBytes)}"
             : $"«{removing?.Name}» удалена, остатки в корзине: {Format.Bytes(r.FreedBytes)}, не удалось: {r.Skipped.Count}");

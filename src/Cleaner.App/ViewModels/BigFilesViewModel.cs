@@ -122,6 +122,7 @@ public partial class BigFilesViewModel : ObservableObject
             IsBusy = false;
             SelectionChanged();
         }
+        if (Status != "Поиск отменён") Sounds.Found();
     }
 
     private void Show(IEnumerable<BigFile> files)
@@ -143,6 +144,7 @@ public partial class BigFilesViewModel : ObservableObject
         {
             var items = rows.Select(r => new JunkItem(r.File.Path, r.SizeBytes, false, true)).ToList();
             var result = await Task.Run(() => AppServices.Deleter.SendToRecycleBin(items, manualSelection: true, default));
+            if (result.Deleted > 0) Sounds.Done(); else Sounds.Warn();
             // Оставшиеся файлы перегруппировываем: в папке мог остаться один файл.
             var left = Rows.Where(r => File.Exists(r.File.Path)).Select(r => (r.File, r.IsChecked)).ToList();
             Show(left.Select(x => x.File));
