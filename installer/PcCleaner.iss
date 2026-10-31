@@ -38,9 +38,11 @@ Name: "{autoprograms}\PcCleaner"; Filename: "{app}\PcCleaner.exe"
 Name: "{autodesktop}\PcCleaner"; Filename: "{app}\PcCleaner.exe"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\PcCleaner.exe"; Description: "Запустить PcCleaner"; Flags: postinstall nowait skipifsilent
+; shellexec: программа требует администратора (манифест), а postinstall запускается от обычного
+; пользователя — CreateProcess падает с кодом 740. Через ShellExecute Windows покажет UAC.
+Filename: "{app}\PcCleaner.exe"; Description: "Запустить PcCleaner"; Flags: postinstall nowait skipifsilent shellexec
 ; Обновление из программы (/UPDATE=1): после тихой установки сразу запускаем новую версию.
-Filename: "{app}\PcCleaner.exe"; Flags: nowait; Check: IsUpdate
+Filename: "{app}\PcCleaner.exe"; Flags: nowait shellexec; Check: IsUpdate
 
 [UninstallDelete]
 Type: files; Name: "{app}\settings.json"
