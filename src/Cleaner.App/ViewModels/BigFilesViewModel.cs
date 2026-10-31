@@ -15,14 +15,65 @@ public partial class BigFileRow(BigFile file, Action changed) : ObservableObject
     public string Folder => Path.GetDirectoryName(file.Path) ?? "";
     public string SizeText => Format.Bytes(file.SizeBytes);
     public long SizeBytes => file.SizeBytes;
-    public DateTime LastWrite => file.LastWrite;
+    public string DateText => file.LastWrite.ToString("dd.MM.yyyy");
 
     [ObservableProperty] private bool isChecked;
 
     partial void OnIsCheckedChanged(bool value) => changed();
 }
 
-/// <summary>Вкладка «Большие файлы»: поиск топа по диску, отправка выбранного в корзину.</summary>
+/// <summary>Файлы одной папки. Если файл один — показывается обычной строкой, без заголовка.</summary>
+public partial class BigFileGroupViewModel : ObservableObject
+{
+    private readonly Action changed;
+    private bool bulk;
+
+    public BigFileGroupViewModel(BigFileGroup group, Action changed)
+    {
+        this.changed = changed;
+        Folder = group.Folder;
+        Files = new(group.Files.Select(f => new BigFileRow(f, RowChanged)));
+    }
+
+    public string Folder { get; }
+    public ObservableCollection<BigFileRow> Files { get; }
+    public bool IsMulti => Files.Count > 1;
+    public BigFileRow First => Files[0];
+    public string Header => $"{Folder} — {Files.Count} {Plural(Files.Count)}, {Format.Bytes(Files.Sum(f => f.SizeBytes))}";
+
+    public bool? IsChecked
+    {
+        get
+        {
+            var n = Files.Count(f => f.IsChecked);
+            return n == 0 ? false : n == Files.Count ? true : null;
+        }
+        set
+        {
+            bulk = true;
+            foreach (var f in Files) f.IsChecked = value ?? false;
+            bulk = false;
+            RowChanged();
+        }
+    }
+
+    private void RowChanged()
+    {
+        if (bulk) return;
+        OnPropertyChanged(nameof(IsChecked));
+        changed();
+    }
+
+    private static string Plural(int n) =>
+        (n % 10, n % 100) switch
+        {
+            (1, not 11) => "файл",
+            (>= 2 and <= 4, < 12 or > 14) => "файла",
+            _ => "файлов",
+        };
+}
+
+/// <summary>Вкладка «Большие файлы»: поиск топа по диску, группировка по папкам, отправка в корзину.</summary>
 public partial class BigFilesViewModel : ObservableObject
 {
     private readonly Func<string, Task<bool>> confirm;
@@ -36,7 +87,9 @@ public partial class BigFilesViewModel : ObservableObject
     }
 
     public IReadOnlyList<string> Drives { get; }
-    public ObservableCollection<BigFileRow> Files { get; } = [];
+    public ObservableCollection<BigFileGroupViewModel> Groups { get; } = [];
+
+    private IEnumerable<BigFileRow> Rows => Groups.SelectMany(g => g.Files);
 
     [ObservableProperty] private string selectedDrive;
 
@@ -48,7 +101,7 @@ public partial class BigFilesViewModel : ObservableObject
     [ObservableProperty] private string? status;
 
     public bool IsIdle => !IsBusy;
-    public long SelectedBytes => Files.Where(f => f.IsChecked).Sum(f => f.SizeBytes);
+    public long SelectedBytes => Rows.Where(f => f.IsChecked).Sum(f => f.SizeBytes);
     public string SelectedText => $"Выбрано: {Format.Bytes(SelectedBytes)}";
 
     [RelayCommand(CanExecute = nameof(IsIdle))]
@@ -56,14 +109,14 @@ public partial class BigFilesViewModel : ObservableObject
     {
         cts = new CancellationTokenSource();
         IsBusy = true;
-        Files.Clear();
+        Groups.Clear();
         var s = AppServices.Settings;
         Status = "Ищу…";
         try
         {
             var found = await BigFilesScanner.ScanAsync(SelectedDrive, s.BigFileMinBytes, s.BigFilesTop,
                 new Progress<int>(n => Status = $"Просмотрено файлов: {n:N0}"), cts.Token);
-            foreach (var f in found) Files.Add(new BigFileRow(f, SelectionChanged));
+            Show(found);
             Status = found.Count == 0
                 ? $"Файлов больше {Format.Bytes(s.BigFileMinBytes)} не найдено"
                 : $"Найдено {found.Count} файлов больше {Format.Bytes(s.BigFileMinBytes)}";
@@ -79,12 +132,18 @@ public partial class BigFilesViewModel : ObservableObject
         }
     }
 
+    private void Show(IEnumerable<BigFile> files)
+    {
+        Groups.Clear();
+        foreach (var g in BigFilesScanner.GroupByFolder(files)) Groups.Add(new BigFileGroupViewModel(g, SelectionChanged));
+    }
+
     private bool CanRecycle() => IsIdle && SelectedBytes > 0;
 
     [RelayCommand(CanExecute = nameof(CanRecycle))]
     private async Task RecycleAsync()
     {
-        var rows = Files.Where(f => f.IsChecked).ToList();
+        var rows = Rows.Where(f => f.IsChecked).ToList();
         if (!await confirm($"Отправить в корзину {rows.Count} файл(ов), {Format.Bytes(SelectedBytes)}?")) return;
 
         IsBusy = true;
@@ -92,7 +151,10 @@ public partial class BigFilesViewModel : ObservableObject
         {
             var items = rows.Select(r => new JunkItem(r.File.Path, r.SizeBytes, false, true)).ToList();
             var result = await Task.Run(() => AppServices.Deleter.SendToRecycleBin(items, manualSelection: true, default));
-            foreach (var r in rows.Where(r => !File.Exists(r.File.Path))) Files.Remove(r);
+            // Оставшиеся файлы перегруппировываем: в папке мог остаться один файл.
+            var left = Rows.Where(r => File.Exists(r.File.Path)).Select(r => (r.File, r.IsChecked)).ToList();
+            Show(left.Select(x => x.File));
+            foreach (var r in Rows) r.IsChecked = left.First(x => x.File == r.File).IsChecked;
             Status = result.Skipped.Count == 0
                 ? $"В корзину: {Format.Bytes(result.FreedBytes)}"
                 : $"В корзину: {Format.Bytes(result.FreedBytes)}, не удалось: {string.Join(", ", result.Skipped.Select(x => $"{Path.GetFileName(x.Path)} ({x.Reason})"))}";
@@ -108,9 +170,15 @@ public partial class BigFilesViewModel : ObservableObject
     private void Cancel() => cts?.Cancel();
 
     [RelayCommand]
-    private static void OpenFolder(BigFileRow? row)
+    private static void OpenFolder(object? target)
     {
-        if (row != null) Process.Start("explorer.exe", $"/select,\"{row.File.Path}\"");
+        var path = target switch
+        {
+            BigFileRow r => $"/select,\"{r.File.Path}\"",
+            BigFileGroupViewModel g => $"\"{g.Folder}\"",
+            _ => null,
+        };
+        if (path != null) Process.Start("explorer.exe", path);
     }
 
     private void SelectionChanged()

@@ -2,8 +2,21 @@ namespace Cleaner.Core.BigFiles;
 
 public record BigFile(string Path, long SizeBytes, DateTime LastWrite);
 
+/// <summary>Большие файлы одной папки.</summary>
+public record BigFileGroup(string Folder, IReadOnlyList<BigFile> Files)
+{
+    public long TotalBytes => Files.Sum(f => f.SizeBytes);
+}
+
 public static class BigFilesScanner
 {
+    /// <summary>Группы по папке: самые тяжёлые папки первыми, внутри — файлы по убыванию.</summary>
+    public static IReadOnlyList<BigFileGroup> GroupByFolder(IEnumerable<BigFile> files) =>
+        files.GroupBy(f => System.IO.Path.GetDirectoryName(f.Path) ?? "", StringComparer.OrdinalIgnoreCase)
+            .Select(g => new BigFileGroup(g.Key, g.OrderByDescending(f => f.SizeBytes).ToList()))
+            .OrderByDescending(g => g.TotalBytes)
+            .ToList();
+
     private static readonly string[] SkippedDirNames = ["$Recycle.Bin", "System Volume Information"];
 
     /// <summary>

@@ -46,4 +46,32 @@ public class BigFilesScannerTests
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
             BigFilesScanner.ScanAsync(t.Path, 10, 50, null, new CancellationToken(true)));
     }
+
+    private static BigFile F(string path, long size) => new(path, size, DateTime.Today);
+
+    [Fact]
+    public void FilesInSameFolderGrouped()
+    {
+        var groups = BigFilesScanner.GroupByFolder([F(@"C:\a\1.iso", 10), F(@"C:\b\x.vhd", 50), F(@"C:\a\2.iso", 30)]);
+
+        Assert.Equal(2, groups.Count);
+        var a = Assert.Single(groups, g => g.Folder == @"C:\a");
+        Assert.Equal([30L, 10L], a.Files.Select(f => f.SizeBytes));
+        Assert.Equal(40, a.TotalBytes);
+    }
+
+    [Fact]
+    public void GroupsOrderedByTotalSize()
+    {
+        // одиночный 50 против папки 30+25=55 — папка первая
+        var groups = BigFilesScanner.GroupByFolder([F(@"C:\b\x", 50), F(@"C:\a\1", 30), F(@"C:\a\2", 25)]);
+        Assert.Equal([@"C:\a", @"C:\b"], groups.Select(g => g.Folder));
+    }
+
+    [Fact]
+    public void FolderCaseIgnored()
+    {
+        var groups = BigFilesScanner.GroupByFolder([F(@"C:\Data\1", 10), F(@"c:\data\2", 20)]);
+        Assert.Equal(2, Assert.Single(groups).Files.Count);
+    }
 }

@@ -3,8 +3,35 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              x:Name="Root">
+    <UserControl.Resources>
+        <!-- Строка файла: галочка | имя | папка | размер | дата | открыть -->
+        <DataTemplate x:Key="FileRow">
+            <Grid Margin="0,2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="32" />
+                    <ColumnDefinition Width="2*" />
+                    <ColumnDefinition Width="2*" />
+                    <ColumnDefinition Width="80" />
+                    <ColumnDefinition Width="90" />
+                    <ColumnDefinition Width="40" />
+                </Grid.ColumnDefinitions>
+                <CheckBox IsChecked="{Binding IsChecked}" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                           ToolTip="{Binding File.Path}" />
+                <TextBlock Grid.Column="2" Text="{Binding Folder}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                           Opacity="0.7" Margin="8,0,0,0" ToolTip="{Binding Folder}" />
+                <TextBlock Grid.Column="3" Text="{Binding SizeText}" VerticalAlignment="Center" HorizontalAlignment="Right" />
+                <TextBlock Grid.Column="4" Text="{Binding DateText}" VerticalAlignment="Center" HorizontalAlignment="Right" Opacity="0.7" />
+                <ui:Button Grid.Column="5" Icon="{ui:SymbolIcon FolderOpen24}" ToolTip="Показать в папке" Padding="6,2"
+                           HorizontalAlignment="Right"
+                           Command="{Binding DataContext.OpenFolderCommand, ElementName=Root}" CommandParameter="{Binding}" />
+            </Grid>
+        </DataTemplate>
+    </UserControl.Resources>
+
     <Grid Margin="0,12,0,0">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
@@ -27,33 +54,77 @@
             </DockPanel>
         </ui:Card>
 
-        <DataGrid Grid.Row="1" ItemsSource="{Binding Files}" AutoGenerateColumns="False" CanUserAddRows="False"
-                  HeadersVisibility="Column" SelectionMode="Single" GridLinesVisibility="None">
-            <DataGrid.Columns>
-                <DataGridTemplateColumn Width="Auto">
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <CheckBox IsChecked="{Binding IsChecked, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Center" />
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
-                <DataGridTextColumn Header="Имя" Binding="{Binding Name}" Width="2*" IsReadOnly="True" />
-                <DataGridTextColumn Header="Папка" Binding="{Binding Folder}" Width="2*" IsReadOnly="True" />
-                <DataGridTextColumn Header="Размер" Binding="{Binding SizeText}" SortMemberPath="SizeBytes" Width="80" IsReadOnly="True" />
-                <DataGridTextColumn Header="Изменён" Binding="{Binding LastWrite, StringFormat=dd.MM.yyyy}" Width="100" IsReadOnly="True" />
-                <DataGridTemplateColumn Width="Auto">
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <ui:Button Icon="{ui:SymbolIcon FolderOpen24}" ToolTip="Открыть папку" Padding="6,2"
-                                       Command="{Binding DataContext.OpenFolderCommand, ElementName=Root}"
-                                       CommandParameter="{Binding}" />
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
-            </DataGrid.Columns>
-        </DataGrid>
+        <!-- Шапка колонок -->
+        <Grid Grid.Row="1" Margin="16,0,32,4" Opacity="0.7"
+              Visibility="{Binding Groups.Count, Converter={StaticResource NotZero}}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="32" />
+                <ColumnDefinition Width="2*" />
+                <ColumnDefinition Width="2*" />
+                <ColumnDefinition Width="80" />
+                <ColumnDefinition Width="90" />
+                <ColumnDefinition Width="40" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="1" Text="Имя" />
+            <TextBlock Grid.Column="2" Text="Папка" Margin="8,0,0,0" />
+            <TextBlock Grid.Column="3" Text="Размер" HorizontalAlignment="Right" />
+            <TextBlock Grid.Column="4" Text="Изменён" HorizontalAlignment="Right" />
+        </Grid>
 
-        <ui:Card Grid.Row="2" Margin="0,12,0,0">
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" IsEnabled="{Binding IsIdle}">
+            <ItemsControl ItemsSource="{Binding Groups}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Margin="0,0,0,6" Padding="16,6" CornerRadius="6"
+                                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}">
+                            <ContentControl Content="{Binding}">
+                                <ContentControl.Style>
+                                    <Style TargetType="ContentControl">
+                                        <!-- Один файл в папке — просто строка -->
+                                        <Setter Property="ContentTemplate">
+                                            <Setter.Value>
+                                                <DataTemplate>
+                                                    <ContentPresenter Content="{Binding First}" ContentTemplate="{StaticResource FileRow}" />
+                                                </DataTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Style.Triggers>
+                                            <!-- Несколько файлов — заголовок папки и файлы под ним -->
+                                            <DataTrigger Binding="{Binding IsMulti}" Value="True">
+                                                <Setter Property="ContentTemplate">
+                                                    <Setter.Value>
+                                                        <DataTemplate>
+                                                            <Expander IsExpanded="False">
+                                                                <Expander.Header>
+                                                                    <DockPanel>
+                                                                        <ui:Button DockPanel.Dock="Right" Icon="{ui:SymbolIcon FolderOpen24}"
+                                                                                   ToolTip="Открыть папку" Padding="6,2" Margin="8,0,0,0"
+                                                                                   Command="{Binding DataContext.OpenFolderCommand, ElementName=Root}"
+                                                                                   CommandParameter="{Binding}" />
+                                                                        <CheckBox IsChecked="{Binding IsChecked}" IsThreeState="False" VerticalAlignment="Center" />
+                                                                        <ui:SymbolIcon Symbol="Folder24" Margin="4,0,8,0" VerticalAlignment="Center" />
+                                                                        <TextBlock Text="{Binding Header}" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                                                   TextTrimming="CharacterEllipsis" ToolTip="{Binding Folder}" />
+                                                                    </DockPanel>
+                                                                </Expander.Header>
+                                                                <ItemsControl ItemsSource="{Binding Files}" ItemTemplate="{StaticResource FileRow}"
+                                                                              Margin="0,4,0,0" />
+                                                            </Expander>
+                                                        </DataTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ContentControl.Style>
+                            </ContentControl>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <ui:Card Grid.Row="3" Margin="0,12,0,0">
             <DockPanel>
                 <ui:Button DockPanel.Dock="Right" Content="В корзину" Appearance="Primary" Icon="{ui:SymbolIcon Delete24}"
                            Command="{Binding RecycleCommand}" Padding="24,10" />
