@@ -20,7 +20,7 @@ public static class SourceCatalog
             new RecycleBinSource(),
             new FolderContentsSource("npm-cache", "Кэш npm", Categories.Dev, Path.Combine(local, "npm-cache"), deleter),
             new FolderContentsSource("gradle-cache", "Кэш Gradle", Categories.Dev,
-                Path.Combine(profile, ".gradle", "caches"), deleter,
+                Path.Combine(GradleHome(profile), "caches"), deleter,
                 checkedByDefault: false, warning: "Следующая сборка Android-проектов будет дольше"),
             Chromium("chrome-cache", "Кэш Chrome", "Chrome", Path.Combine(local, @"Google\Chrome\User Data"), "chrome", deleter),
             Chromium("edge-cache", "Кэш Edge", "Edge", Path.Combine(local, @"Microsoft\Edge\User Data"), "msedge", deleter),
@@ -30,6 +30,10 @@ public static class SourceCatalog
             new ProjectBuildsSource(settings.ProjectRoots, deleter),
         ];
     }
+
+    /// <summary>GRADLE_USER_HOME, если задан (например, D:\Cache\gradle), иначе ~/.gradle.</summary>
+    private static string GradleHome(string profile) =>
+        Environment.GetEnvironmentVariable("GRADLE_USER_HOME") is { Length: > 0 } home ? home : Path.Combine(profile, ".gradle");
 
     private static BrowserCacheSource Chromium(
         string id, string title, string name, string userData, string process, FileDeleter deleter) =>
