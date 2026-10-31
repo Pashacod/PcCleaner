@@ -16,6 +16,7 @@ public static class SourceCatalog
             new FolderContentsSource("user-temp", "Временные файлы", Categories.System, Path.GetTempPath(), deleter),
             new FolderContentsSource("windows-temp", "Временные файлы Windows", Categories.System,
                 Path.Combine(windows, "Temp"), deleter),
+            new RecycleBinSource(),
             new FolderContentsSource("npm-cache", "Кэш npm", Categories.Dev, Path.Combine(local, "npm-cache"), deleter),
             new FolderContentsSource("gradle-cache", "Кэш Gradle", Categories.Dev,
                 Path.Combine(profile, ".gradle", "caches"), deleter,
