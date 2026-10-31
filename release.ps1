@@ -3,7 +3,8 @@
 # выкладывает релиз на GitHub. Программы у пользователей увидят его при запуске.
 param(
     [Parameter(Mandatory)][ValidatePattern('^\d+\.\d+\.\d+$')][string]$Version,
-    [string]$Notes = ""
+    [string]$Notes = "",
+    [string]$Label = "бета"   # пометка в названии релиза; пустая строка — без пометки
 )
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
@@ -31,7 +32,10 @@ git push origin main "v$Version"
 if ($LASTEXITCODE -ne 0) { throw "git push не удался" }
 
 $setup = "dist\PcCleaner-Setup-$Version.exe"
-if (-not $Notes) { $Notes = "PcCleaner $Version" }
-gh release create "v$Version" $setup --title "PcCleaner $Version" --notes $Notes
+$title = if ($Label) { "PcCleaner $Version ($Label)" } else { "PcCleaner $Version" }
+if (-not $Notes) { $Notes = $title }
+if ($Label -eq "бета") { $Notes = "Бета-версия. $Notes" }
+# Не --prerelease: /releases/latest пропускает пре-релизы, и программы не увидели бы обновление.
+gh release create "v$Version" $setup --title $title --notes $Notes
 if ($LASTEXITCODE -ne 0) { throw "gh release не удался" }
 Write-Host "Готово: https://github.com/Pashacod/PcCleaner/releases/tag/v$Version"
