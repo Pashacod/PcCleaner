@@ -165,4 +165,52 @@ public class FileDeleterTests
     public void RecycleAsksBeforePermanentDelete() =>
         Assert.True((RecycleBin.Flags & RecycleBin.FOF_WANTNUKEWARNING) != 0,
             "без FOF_WANTNUKEWARNING Windows молча удаляет насовсем файлы, не влезающие в корзину");
+
+    private sealed class Recorder : IProgress<long>
+    {
+        public List<long> Values { get; } = [];
+        public void Report(long value) => Values.Add(value);
+    }
+
+    [Fact]
+    public void ProgressReachesSelectedTotalEvenWithLockedFile()
+    {
+        using var t = new TempDir();
+        var a = t.File("a.bin", 100);
+        var locked = t.File("locked.bin", 50);
+        var unselected = t.File("u.bin", 999);
+        using var hold = new FileStream(locked, FileMode.Open, FileAccess.Read, FileShare.None);
+        var p = new Recorder();
+
+        Deleter().DeletePermanently([File(a), File(locked), File(unselected, selected: false)], default, p);
+
+        Assert.Equal(150, p.Values[^1]);
+    }
+
+    [Fact]
+    public void ProgressMovesInsideBigFolder()
+    {
+        using var t = new TempDir();
+        for (var i = 0; i < 4; i++) t.File($@"d\f{i}.bin", 2 * 1024 * 1024);
+        var p = new Recorder();
+
+        Deleter().DeletePermanently([Dir(t["d"])], default, p);
+
+        Assert.True(p.Values.Count >= 3, $"отчётов: {p.Values.Count} — полоса стояла бы до конца папки");
+        Assert.Equal(8L * 1024 * 1024, p.Values[^1]);
+        Assert.Equal(p.Values.Order(), p.Values); // не идёт назад
+    }
+
+    [Fact]
+    public void RecycleProgressPerItem()
+    {
+        using var t = new TempDir();
+        var a = t.File("r1.bin", 10);
+        var b = t.File("r2.bin", 20);
+        var p = new Recorder();
+
+        Deleter().SendToRecycleBin([File(a), File(b)], manualSelection: true, default, p);
+
+        Assert.Equal([10L, 30L], p.Values);
+    }
 }

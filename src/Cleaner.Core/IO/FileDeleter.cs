@@ -10,34 +10,40 @@ namespace Cleaner.Core.IO;
 public class FileDeleter(PathGuard guard, ILog log)
 {
     /// <summary>Удаляет выбранные элементы насовсем. При отмене возвращает то, что успело.</summary>
-    public CleanResult DeletePermanently(IEnumerable<JunkItem> items, CancellationToken ct)
+    /// <param name="progress">Сколько байт выбранного уже обработано (удалено или пропущено) — для полосы очистки.</param>
+    public CleanResult DeletePermanently(IEnumerable<JunkItem> items, CancellationToken ct, IProgress<long>? progress = null)
     {
-        var run = new Run();
+        var run = new Run(progress);
         foreach (var item in items.Where(i => i.Selected))
         {
             if (ct.IsCancellationRequested) break;
-            if (!Allowed(item.Path, false, run)) continue;
-            if (DeleteEntry(item.Path, run, ct)) run.Deleted++;
+            var start = run.Done;
+            if (Allowed(item.Path, false, run) && DeleteEntry(item.Path, run, ct)) run.Deleted++;
+            run.CompleteItem(start, item.SizeBytes);
         }
         return run.Result();
     }
 
     /// <param name="manualSelection">Файлы выбрал человек — разрешено содержимое папок профиля.</param>
-    public CleanResult SendToRecycleBin(IEnumerable<JunkItem> items, bool manualSelection, CancellationToken ct)
+    public CleanResult SendToRecycleBin(IEnumerable<JunkItem> items, bool manualSelection, CancellationToken ct,
+        IProgress<long>? progress = null)
     {
-        var run = new Run();
+        var run = new Run(progress);
         foreach (var item in items.Where(i => i.Selected))
         {
             if (ct.IsCancellationRequested) break;
-            if (!Path.Exists(item.Path)) continue;
-            if (!Allowed(item.Path, manualSelection, run)) continue;
-            if (RecycleBin.Send(item.Path))
+            var start = run.Done;
+            if (Path.Exists(item.Path) && Allowed(item.Path, manualSelection, run))
             {
-                run.Deleted++;
-                run.Freed += item.SizeBytes;
-                log.Write($"в корзину: {item.Path} ({item.SizeBytes} байт)");
+                if (RecycleBin.Send(item.Path))
+                {
+                    run.Deleted++;
+                    run.Freed += item.SizeBytes;
+                    log.Write($"в корзину: {item.Path} ({item.SizeBytes} байт)");
+                }
+                else run.Skip(item.Path, SkipReasons.RecycleFailed);
             }
-            else run.Skip(item.Path, SkipReasons.RecycleFailed);
+            run.CompleteItem(start, item.SizeBytes);
         }
         return run.Result();
     }
@@ -59,17 +65,19 @@ public class FileDeleter(PathGuard guard, ILog log)
         // Ссылку удаляем саму, не заходя в цель.
         if (info is DirectoryInfo d && !info.Attributes.HasFlag(FileAttributes.ReparsePoint))
             return DeleteTree(d, run, ct);
-        return Try(info, run, () =>
+        var size = info is FileInfo fi ? fi.Length : 0;
+        var ok = Try(info, run, () =>
         {
             if (info is FileInfo f)
             {
-                var size = f.Length;
                 if (f.IsReadOnly) f.IsReadOnly = false;
                 f.Delete();
                 run.Freed += size;
             }
             else Directory.Delete(info.FullName, false);
         });
+        run.Advance(size); // и удалённый, и пропущенный файл двигают полосу
+        return ok;
     }
 
     private bool DeleteTree(DirectoryInfo dir, Run run, CancellationToken ct)
@@ -122,13 +130,37 @@ public class FileDeleter(PathGuard guard, ILog log)
         return false;
     }
 
-    private sealed class Run
+    private sealed class Run(IProgress<long>? progress)
     {
+        private const long ReportStep = 1024 * 1024; // чаще чем раз в 1 МБ окно не дёргаем
+
         public long Freed;
         public int Deleted;
+        public long Done;
+        private long reported = -1;
         private readonly List<SkippedItem> skipped = [];
 
         public void Skip(string path, string reason) => skipped.Add(new SkippedItem(path, reason));
+
+        public void Advance(long bytes)
+        {
+            Done += bytes;
+            if (Done - reported >= ReportStep) Report();
+        }
+
+        /// <summary>Элемент обработан: полоса доходит до его размера из сканирования, даже если часть пропущена.</summary>
+        public void CompleteItem(long start, long itemSize)
+        {
+            Done = Math.Max(Done, start + itemSize);
+            Report();
+        }
+
+        private void Report()
+        {
+            if (progress == null || Done == reported) return;
+            reported = Done;
+            progress.Report(Done);
+        }
 
         public CleanResult Result() => new(Freed, Deleted, skipped);
     }

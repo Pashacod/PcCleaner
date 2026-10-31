@@ -95,13 +95,13 @@ public partial class SourceViewModel(IJunkSource source, Action changed) : Obser
         }
     }
 
-    public async Task<CleanResult> CleanAsync(CancellationToken ct)
+    public async Task<CleanResult> CleanAsync(CancellationToken ct, IProgress<long>? progress = null)
     {
         if (scan == null || SelectedBytes == 0) return CleanResult.Empty;
         var selected = scan with { Items = Items.Select(i => i.Item with { Selected = i.IsChecked }).ToList() };
         try
         {
-            var r = await source.CleanAsync(selected, ct);
+            var r = await source.CleanAsync(selected, progress, ct);
             AppServices.Log.Write($"{source.Id}: освобождено {r.FreedBytes} байт, удалено {r.Deleted}, пропущено {r.Skipped.Count}");
             return r;
         }

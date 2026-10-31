@@ -110,12 +110,12 @@ public class OldDriversSource(IDriverStore store) : IJunkSource
         }, ct);
     }
 
-    public async Task<CleanResult> CleanAsync(ScanResult scan, CancellationToken ct)
+    public async Task<CleanResult> CleanAsync(ScanResult scan, IProgress<long>? progress, CancellationToken ct)
     {
         var selected = scan.Items.Where(i => i.Selected && infByDir.ContainsKey(i.Path)).ToList();
         if (selected.Count == 0) return CleanResult.Empty;
 
-        long freed = 0;
+        long freed = 0, done = 0;
         var deleted = 0;
         var skipped = new List<SkippedItem>();
         foreach (var item in selected)
@@ -127,6 +127,8 @@ public class OldDriversSource(IDriverStore store) : IJunkSource
                 freed += item.SizeBytes;
             }
             else skipped.Add(new SkippedItem(item.Path, InUseReason));
+            done += item.SizeBytes;
+            progress?.Report(done);
         }
         return new CleanResult(freed, deleted, skipped);
     }

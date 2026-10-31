@@ -119,7 +119,7 @@ public class OldDriversSourceTests
         var scan = await src.ScanAsync(new Progress<long>(), default);
         var selected = scan with { Items = scan.Items.Select(i => i with { Selected = true }).ToList() };
 
-        var r = await src.CleanAsync(selected, default);
+        var r = await src.CleanAsync(selected, null, default);
 
         Assert.Equal(["delete oem16.inf", "delete oem50.inf"], store.Calls);
         Assert.Equal(2, r.Deleted);
@@ -134,7 +134,7 @@ public class OldDriversSourceTests
         var scan = await src.ScanAsync(new Progress<long>(), default);
         var selected = scan with { Items = scan.Items.Select(i => i with { Selected = true }).ToList() };
 
-        var r = await src.CleanAsync(selected, default);
+        var r = await src.CleanAsync(selected, null, default);
 
         Assert.Equal(1, r.Deleted);
         var s = Assert.Single(r.Skipped);
@@ -149,7 +149,7 @@ public class OldDriversSourceTests
         var src = new OldDriversSource(store);
         var scan = await src.ScanAsync(new Progress<long>(), default);
 
-        await src.CleanAsync(scan, default);
+        await src.CleanAsync(scan, null, default);
 
         Assert.Empty(store.Calls);
     }

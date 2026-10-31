@@ -37,8 +37,8 @@ public class ProjectBuildsSource(IReadOnlyList<string> roots, FileDeleter delete
         return ItemScanner.Scan(Id, found, progress, ct);
     }, ct);
 
-    public Task<CleanResult> CleanAsync(ScanResult scan, CancellationToken ct) =>
-        Task.Run(() => deleter.DeletePermanently(scan.Items, ct));
+    public Task<CleanResult> CleanAsync(ScanResult scan, IProgress<long>? progress, CancellationToken ct) =>
+        Task.Run(() => deleter.DeletePermanently(scan.Items, ct, progress));
 
     private static void Walk(DirectoryInfo dir, List<(string, bool)> found, CancellationToken ct)
     {

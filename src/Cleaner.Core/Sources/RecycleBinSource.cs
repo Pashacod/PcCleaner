@@ -36,11 +36,12 @@ public class RecycleBinSource : IJunkSource
         return new ScanResult(Id, items, size);
     }, ct);
 
-    public Task<CleanResult> CleanAsync(ScanResult scan, CancellationToken ct) => Task.Run(() =>
+    public Task<CleanResult> CleanAsync(ScanResult scan, IProgress<long>? progress, CancellationToken ct) => Task.Run(() =>
     {
         var item = scan.Items.FirstOrDefault(i => i.Selected);
         if (item == null || ct.IsCancellationRequested) return CleanResult.Empty;
         var hr = SHEmptyRecycleBin(IntPtr.Zero, null, SHERB_NOCONFIRMATION | SHERB_NOPROGRESSUI | SHERB_NOSOUND);
+        progress?.Report(item.SizeBytes); // корзина очищается одним вызовом — полоса шагает разом
         return hr == 0
             ? new CleanResult(item.SizeBytes, 1, [])
             : new CleanResult(0, 0, [new SkippedItem("Корзина", $"ошибка очистки корзины (0x{hr:X8})")]);

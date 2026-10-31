@@ -68,7 +68,7 @@ public class BrowserCacheSourceTests
         var src = Chrome(t["User Data"], running: true);
         var scan = await src.ScanAsync(NoProgress, default);
 
-        var r = await src.CleanAsync(scan, default);
+        var r = await src.CleanAsync(scan, null, default);
 
         Assert.True(File.Exists(f));
         Assert.Equal(0, r.FreedBytes);
@@ -84,7 +84,7 @@ public class BrowserCacheSourceTests
         var src = Chrome(t["User Data"]);
         var scan = await src.ScanAsync(NoProgress, default);
 
-        var r = await src.CleanAsync(scan, default);
+        var r = await src.CleanAsync(scan, null, default);
 
         Assert.Equal(50, r.FreedBytes);
         Assert.False(File.Exists(t[@"User Data\Default\Cache\x.bin"]));

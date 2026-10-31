@@ -9,7 +9,8 @@ public interface IJunkSource
     string? Warning { get; }
     bool CheckedByDefault { get; }
     Task<ScanResult> ScanAsync(IProgress<long> progress, CancellationToken ct);
-    Task<CleanResult> CleanAsync(ScanResult scan, CancellationToken ct);
+    /// <param name="progress">Сколько байт выбранного обработано — для полосы очистки.</param>
+    Task<CleanResult> CleanAsync(ScanResult scan, IProgress<long>? progress, CancellationToken ct);
 }
 
 public static class Categories

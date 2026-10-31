@@ -26,10 +26,10 @@ public class BrowserCacheSource(
         return isRunning() ? scan with { Blocker = BlockerText } : scan;
     }, ct);
 
-    public Task<CleanResult> CleanAsync(ScanResult scan, CancellationToken ct) =>
+    public Task<CleanResult> CleanAsync(ScanResult scan, IProgress<long>? progress, CancellationToken ct) =>
         isRunning()
             ? Task.FromResult(new CleanResult(0, 0, [new SkippedItem(title, BlockerText)]))
-            : Task.Run(() => deleter.DeletePermanently(scan.Items, ct));
+            : Task.Run(() => deleter.DeletePermanently(scan.Items, ct, progress));
 
     private string BlockerText => $"Закройте {browserName} и нажмите «Повторить»";
 

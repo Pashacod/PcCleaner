@@ -62,7 +62,7 @@ public class FolderContentsSourceTests
         var src = Source(t["f"]);
         var scan = await src.ScanAsync(new SyncProgress(), default);
 
-        var r = await src.CleanAsync(scan, default);
+        var r = await src.CleanAsync(scan, null, default);
 
         Assert.Equal(40, r.FreedBytes);
         Assert.True(Directory.Exists(t["f"]), "сама папка источника остаётся");
@@ -94,5 +94,20 @@ public class FolderContentsSourceTests
         var r = await Source(t["f"]).ScanAsync(p, default);
 
         Assert.Equal(r.TotalBytes, p.Last);
+    }
+
+    [Fact]
+    public async Task CleanReportsProgressUpToSelected()
+    {
+        using var t = new TempDir();
+        t.File(@"f\a.bin", 10);
+        t.File(@"f\sub\c.bin", 30);
+        var src = Source(t["f"]);
+        var scan = await src.ScanAsync(new SyncProgress(), default);
+        var p = new SyncProgress();
+
+        await src.CleanAsync(scan, p, default);
+
+        Assert.Equal(40, p.Last);
     }
 }

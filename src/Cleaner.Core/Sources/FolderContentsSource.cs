@@ -16,6 +16,6 @@ public class FolderContentsSource(
     public Task<ScanResult> ScanAsync(IProgress<long> progress, CancellationToken ct) =>
         Task.Run(() => ItemScanner.Scan(id, ItemScanner.Children(folder).Select(p => (p, checkedByDefault)), progress, ct), ct);
 
-    public Task<CleanResult> CleanAsync(ScanResult scan, CancellationToken ct) =>
-        Task.Run(() => deleter.DeletePermanently(scan.Items, ct));
+    public Task<CleanResult> CleanAsync(ScanResult scan, IProgress<long>? progress, CancellationToken ct) =>
+        Task.Run(() => deleter.DeletePermanently(scan.Items, ct, progress));
 }

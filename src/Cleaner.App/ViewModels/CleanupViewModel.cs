@@ -35,6 +35,11 @@ public partial class CleanupViewModel : ObservableObject
     [ObservableProperty] private bool hasScanned;
     [ObservableProperty] private string? resultText;
 
+    // Полоса очистки внизу: проценты по байтам выбранного.
+    [ObservableProperty] private bool isCleaning;
+    [ObservableProperty] private double cleanPercent;
+    [ObservableProperty] private string cleanText = "";
+
     public bool IsIdle => !IsBusy;
     public long SelectedBytes => Categories.Sum(c => c.SelectedBytes);
     public string SelectedText => $"Выбрано: {Format.Bytes(SelectedBytes)}";
@@ -72,16 +77,34 @@ public partial class CleanupViewModel : ObservableObject
         cts = new CancellationTokenSource();
         IsBusy = true;
         var total = CleanResult.Empty;
+        var planned = Math.Max(1, SelectedBytes);
+        long before = 0; // байты источников, уже пройденных целиком
+        CleanPercent = 0;
+        IsCleaning = true;
+        // Источник с плашкой (браузер открыт) не чистится — объясняем это в итоге.
+        foreach (var s in Categories.SelectMany(c => c.Sources).Where(s => s.Blocker != null && s.Items.Any(i => i.IsChecked)))
+            total = total.Merge(new CleanResult(0, 0, [new SkippedItem(s.Title, s.Blocker!)]));
         try
         {
-            foreach (var s in Categories.SelectMany(c => c.Sources))
+            foreach (var s in Categories.SelectMany(c => c.Sources).Where(s => s.SelectedBytes > 0))
             {
                 if (cts.IsCancellationRequested) break;
-                total = total.Merge(await s.CleanAsync(cts.Token));
+                var share = s.SelectedBytes;
+                var offset = before;
+                void Show(long done)
+                {
+                    var p = Math.Min(1.0, (offset + Math.Min(done, share)) / (double)planned);
+                    CleanPercent = p * 100;
+                    CleanText = $"Очистка: {s.Title}… {p:P0}";
+                }
+                Show(0);
+                total = total.Merge(await s.CleanAsync(cts.Token, new Progress<long>(Show)));
+                before += share;
             }
         }
         finally
         {
+            IsCleaning = false;
             foreach (var item in total.Skipped) Skipped.Add(item);
             OnPropertyChanged(nameof(SkippedText));
             ResultText = $"Освобождено {Format.Bytes(total.FreedBytes)}";
