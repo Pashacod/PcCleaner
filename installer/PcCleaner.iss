@@ -22,6 +22,7 @@ Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
 UninstallDisplayIcon={app}\PcCleaner.exe
+CloseApplications=force
 
 [Languages]
 Name: "ru"; MessagesFile: "compiler:Languages\Russian.isl"
@@ -38,7 +39,15 @@ Name: "{autodesktop}\PcCleaner"; Filename: "{app}\PcCleaner.exe"; Tasks: desktop
 
 [Run]
 Filename: "{app}\PcCleaner.exe"; Description: "Запустить PcCleaner"; Flags: postinstall nowait skipifsilent
+; Обновление из программы (/UPDATE=1): после тихой установки сразу запускаем новую версию.
+Filename: "{app}\PcCleaner.exe"; Flags: nowait; Check: IsUpdate
 
 [UninstallDelete]
 Type: files; Name: "{app}\settings.json"
 Type: filesandordirs; Name: "{app}\logs"
+
+[Code]
+function IsUpdate: Boolean;
+begin
+  Result := ExpandConstant('{param:UPDATE|0}') = '1';
+end;
