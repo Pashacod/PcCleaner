@@ -213,4 +213,22 @@ public class FileDeleterTests
 
         Assert.Equal([10L, 30L], p.Values);
     }
+
+    [Fact]
+    public void LeftoverInsideProgramDirRecycledOnlyInLeftoverMode()
+    {
+        using var t = new TempDir();
+        var app = t.File(@"App\data.bin", 10);
+        var guard = new PathGuard(new PathGuardRoots(@"X:\Windows", [t.Path], @"X:\Users\u", []));
+        var deleter = new FileDeleter(guard, new NullLog());
+        var item = new JunkItem(t["App"], 10, true, true);
+
+        var normal = deleter.SendToRecycleBin([item], manualSelection: true, default);
+        Assert.Equal("запрещённый путь", Assert.Single(normal.Skipped).Reason);
+        Assert.True(System.IO.File.Exists(app));
+
+        var leftover = deleter.SendToRecycleBin([item], manualSelection: true, default, programLeftover: true);
+        Assert.Equal(1, leftover.Deleted);
+        Assert.False(Directory.Exists(t["App"]));
+    }
 }

@@ -17,6 +17,9 @@ public partial class MainWindow : FluentWindow
             SourceCatalog.CreateDefault(AppServices.Deleter, AppServices.Settings), Confirm);
         BigFiles.DataContext = new BigFilesViewModel(Confirm);
         Duplicates.DataContext = new DuplicatesViewModel(Confirm);
+        var programs = new ProgramsViewModel(Confirm);
+        ProgramsTab.DataContext = programs;
+        Loaded += async (_, _) => await programs.RefreshAsync();
 
         var updates = new UpdateViewModel();
         UpdateBar.DataContext = updates;

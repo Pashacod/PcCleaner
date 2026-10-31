@@ -35,7 +35,11 @@ public class PathGuard(PathGuardRoots roots)
     /// <param name="manualSelection">
     /// Файл выбрал человек вручную (большие файлы): разрешено содержимое папок профиля.
     /// </param>
-    public bool IsAllowed(string path, bool manualSelection = false)
+    /// <param name="programLeftover">
+    /// Остаток удалённой программы: разрешена её папка внутри Program Files / ProgramData,
+    /// но не сами эти папки и не общие (Microsoft, Common Files…).
+    /// </param>
+    public bool IsAllowed(string path, bool manualSelection = false, bool programLeftover = false)
     {
         string full;
         try { full = Path.GetFullPath(path); }
@@ -50,7 +54,14 @@ public class PathGuard(PathGuardRoots roots)
         if (p.Split('\\').Any(part => part.Equals(".git", StringComparison.OrdinalIgnoreCase))) return false;
 
         if (IsUnder(p, windows)) return IsUnder(p, windowsTemp) && !Same(p, windowsTemp);
-        if (programDirs.Any(d => IsUnder(p, d))) return false;
+        if (programDirs.FirstOrDefault(d => IsUnder(p, d)) is { } programDir)
+        {
+            if (!programLeftover || Same(p, programDir)) return false;
+            var first = p[(programDir.Length + 1)..].Split('\\')[0];
+            return !SharedFolders.Names.Contains(first);
+        }
+        // AppData\Local\Microsoft и подобные — общие, даже если имя совпало с издателем.
+        if (programLeftover && SharedFolders.Names.Contains(Path.GetFileName(p))) return false;
 
         if (Same(p, profile)) return false;
         foreach (var d in protectedDirs)

@@ -25,15 +25,16 @@ public class FileDeleter(PathGuard guard, ILog log)
     }
 
     /// <param name="manualSelection">Файлы выбрал человек — разрешено содержимое папок профиля.</param>
+    /// <param name="programLeftover">Остатки удалённой программы — разрешены её папки в Program Files / ProgramData.</param>
     public CleanResult SendToRecycleBin(IEnumerable<JunkItem> items, bool manualSelection, CancellationToken ct,
-        IProgress<long>? progress = null)
+        IProgress<long>? progress = null, bool programLeftover = false)
     {
         var run = new Run(progress);
         foreach (var item in items.Where(i => i.Selected))
         {
             if (ct.IsCancellationRequested) break;
             var start = run.Done;
-            if (Path.Exists(item.Path) && Allowed(item.Path, manualSelection, run))
+            if (Path.Exists(item.Path) && Allowed(item.Path, manualSelection, run, programLeftover))
             {
                 if (RecycleBin.Send(item.Path))
                 {
@@ -48,9 +49,9 @@ public class FileDeleter(PathGuard guard, ILog log)
         return run.Result();
     }
 
-    private bool Allowed(string path, bool manual, Run run)
+    private bool Allowed(string path, bool manual, Run run, bool programLeftover = false)
     {
-        if (guard.IsAllowed(path, manual)) return true;
+        if (guard.IsAllowed(path, manual, programLeftover)) return true;
         log.Write($"ЗАПРЕЩЁННЫЙ ПУТЬ, пропущен: {path}");
         run.Skip(path, SkipReasons.Forbidden);
         return false;
